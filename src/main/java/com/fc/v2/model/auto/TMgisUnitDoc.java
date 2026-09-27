@@ -52,6 +52,21 @@ public class TMgisUnitDoc implements Serializable {
     @ApiModelProperty(value = "注册地(省—市—区县)")
     private String roadName;
 
+    /** 注册地省 */
+    @TableField("region_province")
+    @ApiModelProperty(value = "注册地省")
+    private String regionProvince;
+
+    /** 注册地市（属地列表按此归堆；单位改了属地层级档当场重折） */
+    @TableField("region_city")
+    @ApiModelProperty(value = "注册地市")
+    private String regionCity;
+
+    /** 注册地区县（最末一级归堆） */
+    @TableField("region_county")
+    @ApiModelProperty(value = "注册地区县")
+    private String regionCounty;
+
     /** 挂用专业类别数一档上限(项) */
     @TableField("th1_max")
     @ApiModelProperty(value = "挂用专业类别数一档上限(项)")
@@ -142,6 +157,30 @@ public class TMgisUnitDoc implements Serializable {
 
     public void setRoadName(String roadName) {
         this.roadName = roadName;
+    }
+
+    public String getRegionProvince() {
+        return regionProvince;
+    }
+
+    public void setRegionProvince(String regionProvince) {
+        this.regionProvince = regionProvince;
+    }
+
+    public String getRegionCity() {
+        return regionCity;
+    }
+
+    public void setRegionCity(String regionCity) {
+        this.regionCity = regionCity;
+    }
+
+    public String getRegionCounty() {
+        return regionCounty;
+    }
+
+    public void setRegionCounty(String regionCounty) {
+        this.regionCounty = regionCounty;
     }
 
     public BigDecimal getTh1Max() {

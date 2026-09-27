@@ -16,10 +16,15 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * 作业范围标签建档卡对象 t_mgis_scope_card
+ * 作业范围标签建档卡对象 t_mgis_scope_card。
+ *
+ * <p>一张卡只讲一段范围：卡号系统给号，同一单位同一段范围（范围签名相同）
+ * 只许一张；挂用类别数撞档案三道顶线折算层级档，层级档不许人手填。
+ * 卡只立不改：不设 update_by/update_time/del_flag，服务层没有改卡、删卡入口；
+ * 老卡查得到，但档案注销后不能从老卡上接着添东西（手续门也焊死）。</p>
  *
  * @author fuce
- * @date 2026-09-12
+ * @date 2026-09-27
  */
 @TableName("t_mgis_scope_card")
 @ApiModel(value = "TMgisScopeCard", description = "作业范围标签建档卡")
@@ -32,49 +37,65 @@ public class TMgisScopeCard implements Serializable {
     @ApiModelProperty(value = "主键")
     private Long id;
 
-    /** 作业范围标签卡号 */
-    @TableField("bill_no")
-    @ApiModelProperty(value = "作业范围标签卡号")
-    private String billNo;
+    /** 标签卡号（系统给号 FW+雪花；同一单位同段范围第二张顶回） */
+    @TableField("card_no")
+    @ApiModelProperty(value = "标签卡号(系统给号)")
+    private String cardNo;
 
-    /** 所属资质单位基础档案 */
-    @TableField("site_id")
-    @ApiModelProperty(value = "所属资质单位基础档案")
-    private Integer siteId;
+    /** 资质单位基础档案主键（备查；对档案只认单位编号） */
+    @TableField("unit_id")
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "所属资质单位基础档案主键")
+    private Long unitId;
 
-    /** 资质单位编号 */
-    @TableField("site_no")
+    /** 资质单位编号（立卡按此对档案，只按名称匹配不作数） */
+    @TableField("unit_no")
     @ApiModelProperty(value = "资质单位编号")
-    private String siteNo;
+    private String unitNo;
 
-    /** 本卡挂用专业类别总数(项) */
-    @TableField("qty")
-    @ApiModelProperty(value = "本卡挂用专业类别总数(项)")
-    private BigDecimal qty;
+    /** 范围签名：本卡末级类别代号升序逗号拼接（同单位同签名即同一段范围） */
+    @TableField("scope_sign")
+    @ApiModelProperty(value = "范围签名(末级类别代号升序拼接)")
+    private String scopeSign;
 
-    /** 本年度新增挂用类别数(项) */
-    @TableField("fine_amt")
+    /** 范围签名 SHA-256（定长；唯一约束押它，免得长签名越过索引长度） */
+    @TableField("scope_hash")
+    @ApiModelProperty(value = "范围签名SHA-256")
+    private String scopeHash;
+
+    /** 挂用类别数（项，正整数；即末级类别条数） */
+    @TableField("scope_count")
+    @ApiModelProperty(value = "挂用类别数(项)")
+    private Integer scopeCount;
+
+    /** 本年度新增挂用类别数（立卡时与该单位老卡比对，系统算出） */
+    @TableField("new_category_count")
     @ApiModelProperty(value = "本年度新增挂用类别数(项)")
-    private BigDecimal fineAmt;
+    private Integer newCategoryCount;
 
-    /** 标签层级档 */
+    /** 立卡年度（新增类别按本年度口径比对） */
+    @TableField("registered_year")
+    @ApiModelProperty(value = "立卡年度")
+    private Integer registeredYear;
+
+    /** 层级档 1/2/3（系统撞档案三道顶线折算；等号按高一档） */
     @TableField("grade_level")
-    @ApiModelProperty(value = "标签层级档")
+    @ApiModelProperty(value = "层级档 1一档 2二档 3三档")
     private Integer gradeLevel;
 
-    /** 进展 0待核对 1已核对 2已定档 */
+    /** 层级档系数 = 挂用类别数 ÷ 所在档顶线，两位小数（系统折算） */
+    @TableField("grade_score")
+    @ApiModelProperty(value = "层级档系数(挂用类别数÷所在档顶线,两位小数)")
+    private BigDecimal gradeScore;
+
+    /** 手续进展 0待核对 1已核对 2已定档（只由经手手续推进） */
     @TableField("status")
-    @ApiModelProperty(value = "进展 0待核对 1已核对 2已定档")
+    @ApiModelProperty(value = "手续进展 0待核对 1已核对 2已定档")
     private Integer status;
 
-    /** 删除标记 0正常 1删除 */
-    @TableField("del_flag")
-    @ApiModelProperty(value = "删除标记 0正常 1删除")
-    private Integer delFlag;
-
-    /** 创建者 */
+    /** 创建人：按下立卡那一下是谁就是谁，整张卡重录也不许挪 */
     @TableField(value = "create_by", fill = FieldFill.INSERT)
-    @ApiModelProperty(value = "创建者")
+    @ApiModelProperty(value = "创建人")
     private String createBy;
 
     /** 创建时间 */
@@ -82,22 +103,6 @@ public class TMgisScopeCard implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty(value = "创建时间")
     private Date createTime;
-
-    /** 更新者 */
-    @TableField(value = "update_by", fill = FieldFill.UPDATE)
-    @ApiModelProperty(value = "更新者")
-    private String updateBy;
-
-    /** 更新时间 */
-    @TableField(value = "update_time", fill = FieldFill.UPDATE)
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @ApiModelProperty(value = "更新时间")
-    private Date updateTime;
-
-    /** 备注 */
-    @TableField("remark")
-    @ApiModelProperty(value = "备注")
-    private String remark;
 
     public Long getId() {
         return id;
@@ -107,44 +112,68 @@ public class TMgisScopeCard implements Serializable {
         this.id = id;
     }
 
-    public String getBillNo() {
-        return billNo;
+    public String getCardNo() {
+        return cardNo;
     }
 
-    public void setBillNo(String billNo) {
-        this.billNo = billNo;
+    public void setCardNo(String cardNo) {
+        this.cardNo = cardNo;
     }
 
-    public Integer getSiteId() {
-        return siteId;
+    public Long getUnitId() {
+        return unitId;
     }
 
-    public void setSiteId(Integer siteId) {
-        this.siteId = siteId;
+    public void setUnitId(Long unitId) {
+        this.unitId = unitId;
     }
 
-    public String getSiteNo() {
-        return siteNo;
+    public String getUnitNo() {
+        return unitNo;
     }
 
-    public void setSiteNo(String siteNo) {
-        this.siteNo = siteNo;
+    public void setUnitNo(String unitNo) {
+        this.unitNo = unitNo;
     }
 
-    public BigDecimal getQty() {
-        return qty;
+    public String getScopeSign() {
+        return scopeSign;
     }
 
-    public void setQty(BigDecimal qty) {
-        this.qty = qty;
+    public void setScopeSign(String scopeSign) {
+        this.scopeSign = scopeSign;
     }
 
-    public BigDecimal getFineAmt() {
-        return fineAmt;
+    public String getScopeHash() {
+        return scopeHash;
     }
 
-    public void setFineAmt(BigDecimal fineAmt) {
-        this.fineAmt = fineAmt;
+    public void setScopeHash(String scopeHash) {
+        this.scopeHash = scopeHash;
+    }
+
+    public Integer getScopeCount() {
+        return scopeCount;
+    }
+
+    public void setScopeCount(Integer scopeCount) {
+        this.scopeCount = scopeCount;
+    }
+
+    public Integer getNewCategoryCount() {
+        return newCategoryCount;
+    }
+
+    public void setNewCategoryCount(Integer newCategoryCount) {
+        this.newCategoryCount = newCategoryCount;
+    }
+
+    public Integer getRegisteredYear() {
+        return registeredYear;
+    }
+
+    public void setRegisteredYear(Integer registeredYear) {
+        this.registeredYear = registeredYear;
     }
 
     public Integer getGradeLevel() {
@@ -155,20 +184,20 @@ public class TMgisScopeCard implements Serializable {
         this.gradeLevel = gradeLevel;
     }
 
+    public BigDecimal getGradeScore() {
+        return gradeScore;
+    }
+
+    public void setGradeScore(BigDecimal gradeScore) {
+        this.gradeScore = gradeScore;
+    }
+
     public Integer getStatus() {
         return status;
     }
 
     public void setStatus(Integer status) {
         this.status = status;
-    }
-
-    public Integer getDelFlag() {
-        return delFlag;
-    }
-
-    public void setDelFlag(Integer delFlag) {
-        this.delFlag = delFlag;
     }
 
     public String getCreateBy() {
@@ -185,29 +214,5 @@ public class TMgisScopeCard implements Serializable {
 
     public void setCreateTime(Date createTime) {
         this.createTime = createTime;
-    }
-
-    public String getUpdateBy() {
-        return updateBy;
-    }
-
-    public void setUpdateBy(String updateBy) {
-        this.updateBy = updateBy;
-    }
-
-    public Date getUpdateTime() {
-        return updateTime;
-    }
-
-    public void setUpdateTime(Date updateTime) {
-        this.updateTime = updateTime;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String remark) {
-        this.remark = remark;
     }
 }

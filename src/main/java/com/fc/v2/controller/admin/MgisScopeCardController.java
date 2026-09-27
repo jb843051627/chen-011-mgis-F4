@@ -16,7 +16,11 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 作业范围标签建档卡 Controller
+ * 作业范围标签建档卡 Controller（2026-09-12 自动生成旧门脸，签名照封）。
+ *
+ * <p>新规矩另起新门脸 {@code /mgisScope}：添卡只认「登记」一处。本门读台账
+ * 照旧，add/edit/remove 三个写入门已焊死——卡只立不改、卡号系统给号、
+ * 层级档系统折算，旧 CRUD 绕不过章程。方法签名一仍其旧，扩功能走新重载。</p>
  *
  * @author fuce
  * @date 2026-09-12
@@ -52,29 +56,41 @@ public class MgisScopeCardController extends BaseController {
     }
 
     @Log(title = "作业范围标签建档卡新增", action = "add")
-    @ApiOperation(value = "新增", notes = "新增")
+    @ApiOperation(value = "新增", notes = "旧写入门已封：添卡只走 /mgisScope/register 登记门")
     @PostMapping("/add")
     @RequiresPermissions("mgis:mgisScopeCard:add")
     @ResponseBody
     public AjaxResult add(TMgisScopeCard record) {
-        return toAjax(mgisScopeCardService.insertTMgisScopeCard(record));
+        try {
+            return toAjax(mgisScopeCardService.insertTMgisScopeCard(record));
+        } catch (IllegalStateException e) {
+            return error(e.getMessage());
+        }
     }
 
     @Log(title = "作业范围标签建档卡修改", action = "edit")
-    @ApiOperation(value = "修改保存", notes = "修改保存")
+    @ApiOperation(value = "修改保存", notes = "旧写入门已封：卡只立不改，手续只走 /mgisScope/handle")
     @PostMapping("/edit")
     @RequiresPermissions("mgis:mgisScopeCard:edit")
     @ResponseBody
     public AjaxResult editSave(TMgisScopeCard record) {
-        return toAjax(mgisScopeCardService.updateTMgisScopeCard(record));
+        try {
+            return toAjax(mgisScopeCardService.updateTMgisScopeCard(record));
+        } catch (IllegalStateException e) {
+            return error(e.getMessage());
+        }
     }
 
     @Log(title = "作业范围标签建档卡删除", action = "remove")
-    @ApiOperation(value = "删除", notes = "删除")
+    @ApiOperation(value = "删除", notes = "旧写入门已封：卡只立不改，账上不删卡")
     @DeleteMapping("/remove")
     @RequiresPermissions("mgis:mgisScopeCard:remove")
     @ResponseBody
     public AjaxResult remove(String ids) {
-        return toAjax(mgisScopeCardService.deleteTMgisScopeCardByIds(ids));
+        try {
+            return toAjax(mgisScopeCardService.deleteTMgisScopeCardByIds(ids));
+        } catch (IllegalStateException e) {
+            return error(e.getMessage());
+        }
     }
 }
