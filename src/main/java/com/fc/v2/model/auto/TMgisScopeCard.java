@@ -32,10 +32,20 @@ public class TMgisScopeCard implements Serializable {
     @ApiModelProperty(value = "主键")
     private Long id;
 
-    /** 作业范围标签卡号 */
+    /** 作业范围标签卡号(系统给号) */
     @TableField("bill_no")
-    @ApiModelProperty(value = "作业范围标签卡号")
+    @ApiModelProperty(value = "作业范围标签卡号(系统给号)")
     private String billNo;
+
+    /** 来文单号(人工填写;同一单号并一条) */
+    @TableField("source_bill_no")
+    @ApiModelProperty(value = "来文单号(人工填写;同一单号并一条)")
+    private String sourceBillNo;
+
+    /** 来文来源 CITY_FORWARD市局抄送 UNIT_SELF单位自报 */
+    @TableField("source_from")
+    @ApiModelProperty(value = "来文来源 CITY_FORWARD市局抄送 UNIT_SELF单位自报")
+    private String sourceFrom;
 
     /** 所属资质单位基础档案 */
     @TableField("site_id")
@@ -47,6 +57,11 @@ public class TMgisScopeCard implements Serializable {
     @ApiModelProperty(value = "资质单位编号")
     private String siteNo;
 
+    /** 作业范围段代号(同一单位同一段范围只许一张卡) */
+    @TableField("scope_seg")
+    @ApiModelProperty(value = "作业范围段代号(同一单位同一段范围只许一张卡)")
+    private String scopeSeg;
+
     /** 本卡挂用专业类别总数(项) */
     @TableField("qty")
     @ApiModelProperty(value = "本卡挂用专业类别总数(项)")
@@ -57,10 +72,10 @@ public class TMgisScopeCard implements Serializable {
     @ApiModelProperty(value = "本年度新增挂用类别数(项)")
     private BigDecimal fineAmt;
 
-    /** 标签层级档 */
+    /** 标签层级档(系统撞三道顶线折算,留两位小数,不许人手填) */
     @TableField("grade_level")
-    @ApiModelProperty(value = "标签层级档")
-    private Integer gradeLevel;
+    @ApiModelProperty(value = "标签层级档(系统撞三道顶线折算,留两位小数,不许人手填)")
+    private BigDecimal gradeLevel;
 
     /** 进展 0待核对 1已核对 2已定档 */
     @TableField("status")
@@ -72,9 +87,9 @@ public class TMgisScopeCard implements Serializable {
     @ApiModelProperty(value = "删除标记 0正常 1删除")
     private Integer delFlag;
 
-    /** 创建者 */
+    /** 创建者(立卡那一下写死,重录不许挪) */
     @TableField(value = "create_by", fill = FieldFill.INSERT)
-    @ApiModelProperty(value = "创建者")
+    @ApiModelProperty(value = "创建者(立卡那一下写死,重录不许挪)")
     private String createBy;
 
     /** 创建时间 */
@@ -115,6 +130,22 @@ public class TMgisScopeCard implements Serializable {
         this.billNo = billNo;
     }
 
+    public String getSourceBillNo() {
+        return sourceBillNo;
+    }
+
+    public void setSourceBillNo(String sourceBillNo) {
+        this.sourceBillNo = sourceBillNo;
+    }
+
+    public String getSourceFrom() {
+        return sourceFrom;
+    }
+
+    public void setSourceFrom(String sourceFrom) {
+        this.sourceFrom = sourceFrom;
+    }
+
     public Integer getSiteId() {
         return siteId;
     }
@@ -129,6 +160,14 @@ public class TMgisScopeCard implements Serializable {
 
     public void setSiteNo(String siteNo) {
         this.siteNo = siteNo;
+    }
+
+    public String getScopeSeg() {
+        return scopeSeg;
+    }
+
+    public void setScopeSeg(String scopeSeg) {
+        this.scopeSeg = scopeSeg;
     }
 
     public BigDecimal getQty() {
@@ -147,11 +186,11 @@ public class TMgisScopeCard implements Serializable {
         this.fineAmt = fineAmt;
     }
 
-    public Integer getGradeLevel() {
+    public BigDecimal getGradeLevel() {
         return gradeLevel;
     }
 
-    public void setGradeLevel(Integer gradeLevel) {
+    public void setGradeLevel(BigDecimal gradeLevel) {
         this.gradeLevel = gradeLevel;
     }
 

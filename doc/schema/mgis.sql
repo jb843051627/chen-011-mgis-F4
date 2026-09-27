@@ -55,21 +55,70 @@ CREATE TABLE IF NOT EXISTS t_mgis_qual_line (
 
 CREATE TABLE IF NOT EXISTS t_mgis_scope_card (
   id bigint NOT NULL COMMENT '主键',
-  bill_no varchar(64) DEFAULT NULL COMMENT '作业范围标签卡号',
+  bill_no varchar(64) DEFAULT NULL COMMENT '作业范围标签卡号(系统给号)',
+  source_bill_no varchar(64) DEFAULT NULL COMMENT '来文单号(人工填写;同一单号并一条,账上不留两笔)',
+  source_from varchar(16) DEFAULT NULL COMMENT '来文来源 CITY_FORWARD市局抄送 UNIT_SELF单位自报',
   site_id int DEFAULT NULL COMMENT '所属资质单位基础档案',
   site_no varchar(64) DEFAULT NULL COMMENT '资质单位编号',
+  scope_seg varchar(64) DEFAULT NULL COMMENT '作业范围段代号(同一单位同一段范围只许一张卡)',
   qty decimal(12,2) DEFAULT NULL COMMENT '本卡挂用专业类别总数(项)',
   fine_amt decimal(12,2) DEFAULT NULL COMMENT '本年度新增挂用类别数(项)',
-  grade_level int DEFAULT NULL COMMENT '标签层级档',
+  grade_level decimal(5,2) DEFAULT NULL COMMENT '标签层级档(系统撞三道顶线折算,留两位小数,不许人手填)',
   status int DEFAULT NULL COMMENT '进展 0待核对 1已核对 2已定档',
   del_flag int DEFAULT '0' COMMENT '删除标记 0正常 1删除',
+  create_by varchar(64) DEFAULT NULL COMMENT '创建者(立卡那一下写死,重录不许挪)',
+  create_time datetime DEFAULT NULL COMMENT '创建时间',
+  update_by varchar(64) DEFAULT NULL COMMENT '更新者',
+  update_time datetime DEFAULT NULL COMMENT '更新时间',
+  remark varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_scope_card_source_bill (source_bill_no),
+  UNIQUE KEY uk_scope_card_site_scope (site_no, scope_seg)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='作业范围标签建档卡';
+
+CREATE TABLE IF NOT EXISTS t_mgis_scope_category (
+  id bigint NOT NULL COMMENT '主键',
+  cate_code varchar(32) NOT NULL COMMENT '专业类别代号',
+  cate_name varchar(128) NOT NULL COMMENT '专业类别名称',
+  lvl int NOT NULL COMMENT '层级 1大类 2末级(卡上只许挂末级)',
+  parent_code varchar(32) DEFAULT NULL COMMENT '所属大类代号(末级必填;大类为空)',
+  merged_into varchar(32) DEFAULT NULL COMMENT '并走去向(非空=旧类别已并入别类,不许再挂)',
+  status int NOT NULL DEFAULT '0' COMMENT '0现行 1停用',
+  del_flag int NOT NULL DEFAULT '0' COMMENT '删除标记 0正常 1删除',
   create_by varchar(64) DEFAULT NULL COMMENT '创建者',
   create_time datetime DEFAULT NULL COMMENT '创建时间',
   update_by varchar(64) DEFAULT NULL COMMENT '更新者',
   update_time datetime DEFAULT NULL COMMENT '更新时间',
   remark varchar(500) DEFAULT NULL COMMENT '备注',
-  PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='作业范围标签建档卡';
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_scope_category_code (cate_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='测绘专业类别目录树(一级大类,二级末级)';
+
+CREATE TABLE IF NOT EXISTS t_mgis_scope_card_item (
+  id bigint NOT NULL COMMENT '主键',
+  card_id bigint NOT NULL COMMENT '卡主键',
+  cate_code varchar(32) NOT NULL COMMENT '挂用的末级类别代号',
+  create_by varchar(64) DEFAULT NULL COMMENT '创建者',
+  create_time datetime DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_scope_card_item (card_id, cate_code),
+  KEY idx_scope_item_card (card_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='作业范围标签卡在挂类别(只记眼下在挂)';
+
+CREATE TABLE IF NOT EXISTS t_mgis_scope_card_entry (
+  id bigint NOT NULL COMMENT '主键',
+  card_id bigint NOT NULL COMMENT '卡主键',
+  seq int NOT NULL COMMENT '链上序号(自1连排)',
+  proc varchar(16) NOT NULL COMMENT '手续 REGISTER立卡 CHECK核对 GRADE定档 ADJUST类别增减',
+  payload varchar(500) DEFAULT NULL COMMENT '这一笔要说的话(落笔即定,往后只读)',
+  penned_by varchar(64) NOT NULL COMMENT '经手人(落笔那一下系统写死)',
+  penned_at datetime NOT NULL COMMENT '落笔时辰(系统写死,以秒计)',
+  create_by varchar(64) DEFAULT NULL COMMENT '创建者',
+  create_time datetime DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_scope_entry_seq (card_id, seq),
+  KEY idx_scope_entry_card (card_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='标签卡经手人落笔链(只增不改)';
 
 CREATE TABLE IF NOT EXISTS t_mgis_submit_row (
   id bigint NOT NULL COMMENT '主键',
@@ -129,4 +178,19 @@ CREATE TABLE IF NOT EXISTS t_mgis_use_bill (
 INSERT IGNORE INTO t_mgis_unit_doc (id, site_no, site_name, site_type, road_name, th1_max, th2_max, th3_max, status, del_flag, create_by, create_time)
 VALUES (0, 'ZZ00', '江南省测绘院第一地理信息工程院基础档案', '事业单位', '江南省—临川市—城东区', 30.00, 120.00, 360.00, 0, 0, 'seed', NOW()),
        (1, 'ZZ01', '旧临川市城乡测绘服务中心基础档案（已注销）', '企业单位', '江南省—临川市—城西区', 30.00, 120.00, 360.00, 1, 0, 'seed', NOW());
+
+-- 专业类别目录种子：现行目录（三个大类各带末级）+ 一条已并走的旧类别样例。
+-- GC09 旧工程测量已并入 GC01 控制测量——挂它立卡，当场顶回并指明去向。
+INSERT IGNORE INTO t_mgis_scope_category (id, cate_code, cate_name, lvl, parent_code, merged_into, status, del_flag, create_by, create_time)
+VALUES (101, 'GC',   '工程测量',                 1, NULL, NULL,   0, 0, 'seed', NOW()),
+       (102, 'GC01', '控制测量',                 2, 'GC', NULL,   0, 0, 'seed', NOW()),
+       (103, 'GC02', '地形测量',                 2, 'GC', NULL,   0, 0, 'seed', NOW()),
+       (104, 'GC03', '规划测量',                 2, 'GC', NULL,   0, 0, 'seed', NOW()),
+       (105, 'JX',   '界线与不动产测绘',         1, NULL, NULL,   0, 0, 'seed', NOW()),
+       (106, 'JX01', '界线测绘',                 2, 'JX', NULL,   0, 0, 'seed', NOW()),
+       (107, 'JX02', '不动产测绘',               2, 'JX', NULL,   0, 0, 'seed', NOW()),
+       (108, 'DT',   '地图编制',                 1, NULL, NULL,   0, 0, 'seed', NOW()),
+       (109, 'DT01', '地形图编制',               2, 'DT', NULL,   0, 0, 'seed', NOW()),
+       (110, 'DT02', '专题地图编制',             2, 'DT', NULL,   0, 0, 'seed', NOW()),
+       (111, 'GC09', '旧工程测量（已并入控制测量）', 2, 'GC', 'GC01', 1, 0, 'seed', NOW());
 
